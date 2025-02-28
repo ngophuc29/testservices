@@ -7,9 +7,12 @@ const app = express();
 const port = process.env.PORT || 4004; // Dùng biến môi trường cho port nếu có
 const router = require("./routers/index");
 
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+
 async function startServer() {
   try {
-    await connectDB(); // Đợi kết nối MongoDB thành công trước khi chạy server
+    await connectDB(); 
 
     app.use(
       cors({

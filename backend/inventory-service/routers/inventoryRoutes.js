@@ -19,4 +19,6 @@ router.get("/stats", inventoryController.getStockStats);
 // ✅ API nhập hàng vào kho
 router.post("/import", inventoryController.importStock);
 
+// ✅ **API đồng bộ Inventory với Product Service**
+router.post("/syncInventory", inventoryController.syncInventory);
 module.exports = router;

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
-const PRODUCT_API_URL = "http://localhost:4000/api/inventory/products"; // API lấy sản phẩm
+const INVENTORY_API_URL = "http://localhost:4000/api/inventory"; // API tồn kho
 const IMPORT_API_URL = "http://localhost:4000/api/inventory/import"; // API nhập hàng
+const SYNC_API_URL = "http://localhost:4000/api/inventory/syncInventory"; // API đồng bộ
 
 export default function InventoryUI() {
-    const [products, setProducts] = useState([]);
+    const [inventory, setInventory] = useState([]);
     const [productId, setProductId] = useState("");
     const [quantity, setQuantity] = useState(0);
     const [stockInfo, setStockInfo] = useState(null);
@@ -13,17 +14,20 @@ export default function InventoryUI() {
     const [error, setError] = useState("");
 
     useEffect(() => {
-        fetchProducts();
+        fetchInventory();
+        
     }, []);
 
-    // 🟢 Lấy danh sách sản phẩm (gồm cả stock)
-    const fetchProducts = async () => {
+    // 🟢 Lấy danh sách tồn kho từ Inventory Service
+    const fetchInventory = async () => {
         try {
             setLoading(true);
-            const res = await axios.get(PRODUCT_API_URL);
-            setProducts(res.data);
+            const res = await axios.get(INVENTORY_API_URL);
+            setInventory(res.data);
+            console.log("data lay dc tu inventory : ",res.data);
+            
         } catch (err) {
-            setError("Không thể tải danh sách sản phẩm");
+            setError("Không thể tải danh sách tồn kho");
         } finally {
             setLoading(false);
         }
@@ -35,11 +39,11 @@ export default function InventoryUI() {
             setError("Vui lòng chọn sản phẩm");
             return;
         }
-        const product = products.find((p) => p._id === productId);
-        setStockInfo(product ? { inStock: product.stock > 0, quantity: product.stock } : null);
+        const item = inventory.find((p) => p.productId === productId);
+        setStockInfo(item ? { inStock: item.stock > 0, quantity: item.stock } : null);
     };
 
-    // 🟢 Nhập hàng (tăng stock)
+    // 🟢 Nhập hàng
     const handleImportStock = async () => {
         if (!productId || quantity <= 0) {
             setError("Vui lòng chọn sản phẩm và nhập số lượng hợp lệ");
@@ -49,9 +53,22 @@ export default function InventoryUI() {
         try {
             setLoading(true);
             await axios.post(IMPORT_API_URL, { productId, quantity });
-            fetchProducts(); // Cập nhật danh sách sản phẩm sau khi nhập hàng
+            fetchInventory(); // Cập nhật danh sách tồn kho
         } catch (err) {
             setError("Lỗi khi nhập hàng");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // 🔄 Đồng bộ dữ liệu Inventory từ Product Service
+    const syncInventory = async () => {
+        try {
+            setLoading(true);
+            await axios.post(SYNC_API_URL);
+            fetchInventory();
+        } catch (err) {
+            setError("Lỗi khi đồng bộ Inventory");
         } finally {
             setLoading(false);
         }
@@ -64,6 +81,11 @@ export default function InventoryUI() {
             {error && <p className="text-red-500">{error}</p>}
             {loading && <p className="text-blue-500">Đang tải...</p>}
 
+            {/* 🔄 Nút đồng bộ */}
+            <button onClick={syncInventory} className="bg-yellow-500 text-white p-2 w-full mb-4">
+                Đồng bộ Inventory 🔄
+            </button>
+
             {/* Dropdown chọn sản phẩm */}
             <select
                 value={productId}
@@ -71,9 +93,9 @@ export default function InventoryUI() {
                 className="border p-2 w-full mb-2"
             >
                 <option value="">Chọn sản phẩm</option>
-                {products.map((product) => (
-                    <option key={product._id} value={product._id}>
-                        {product.name}
+                {inventory.map((item) => (
+                    <option key={item.productId} value={item.productId}>
+                        {item.productId} - {item.name}- (Tồn kho: {item.stock})
                     </option>
                 ))}
             </select>
@@ -98,13 +120,13 @@ export default function InventoryUI() {
                 </div>
             )}
 
-            {/* 🔥 Danh sách toàn bộ sản phẩm */}
-            <h2 className="text-xl font-bold mt-4">Danh sách sản phẩm</h2>
+            {/* 🔥 Danh sách tồn kho */}
+            <h2 className="text-xl font-bold mt-4">Danh sách tồn kho</h2>
             <ul className="border p-2">
-                {products.map((product) => (
-                    <li key={product._id} className="border-b p-1">
-                        <span className="font-bold">{product.name}</span> - {product.stock} sản phẩm trong kho
-                        {product.stock < 10 && <span className="text-red-500 ml-2">⚠ Cảnh báo: Tồn kho thấp</span>}
+                {inventory.map((item) => (
+                    <li key={item.productId} className="border-b p-1">
+                        <span className="font-bold">{item.name}</span> - {item.stock} sản phẩm trong kho
+                        {item.stock < 10 && <span className="text-red-500 ml-2">⚠ Cảnh báo: Tồn kho thấp</span>}
                     </li>
                 ))}
             </ul>

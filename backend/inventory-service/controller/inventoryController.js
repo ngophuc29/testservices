@@ -1,3 +1,4 @@
+const Inventory =require("../models/InventoryModels");
 const axios = require("axios");
 
 // URL của Product Service (đổi nếu cần)
@@ -33,6 +34,7 @@ exports.getInventory = async (req, res) => {
 
         const inventoryWithWarning = products.map(product => ({
             productId: product._id,
+            name:product.name,
             stock: product.stock,
             lowStock: product.stock <= LOW_STOCK_THRESHOLD
         }));
@@ -145,3 +147,29 @@ exports.importStock = async (req, res) => {
 };
 
 
+exports.syncInventory = async (req, res) => {
+    try {
+        console.log("🔄 Đang đồng bộ dữ liệu từ Product Service...");
+        const response = await axios.get(PRODUCT_SERVICE_URL);
+        const products = response.data.data;
+
+        if (!Array.isArray(products)) {
+            return res.status(500).json({ message: "Dữ liệu từ Product Service không hợp lệ." });
+        }
+
+        // Duyệt danh sách sản phẩm và cập nhật vào Inventory Service
+        for (const product of products) {
+            await Inventory.findOneAndUpdate(
+                { productId: product._id ,name: product.name },
+                { quantity: product.stock, updatedAt: new Date() },
+                { upsert: true, new: true }
+            );
+        }
+
+        console.log("✅ Đồng bộ dữ liệu thành công!");
+        res.json({ message: "Đồng bộ dữ liệu thành công!" });
+    } catch (error) {
+        console.error("🚨 Lỗi khi đồng bộ Inventory:", error.message);
+        res.status(500).json({ message: "Lỗi server khi đồng bộ Inventory", error: error.message });
+    }
+};

@@ -10,7 +10,7 @@ const updateProduct = require("../controller/updateProduct");
 const deleteProduct = require("../controller/deleteProduct");
 const addReview = require("../controller/addReview");
 const getAllProducts = require("../controller/getAllProducts");
-
+const uploadImage = require("../controller/uploadImage");
 // Route tạo sản phẩm
 router.post("/create-product", createProduct);
 // Route lấy sản phẩm mới
@@ -27,5 +27,9 @@ router.delete("/product/:id", deleteProduct);
 router.post("/product/:id/review", addReview);
 // Route lấy danh sách tất cả sản phẩm
 router.get("/products", getAllProducts);
+
+//route dùng để upload ảnh sản phẩm 
+router.post("/productsImage", uploadImage);
+
 
 module.exports = router;
