@@ -4,6 +4,7 @@ import InventoryPage from "./InventoryPage";
 import ProductPage from "./ProductPage"
 import ProductCardList from "./ProductCardList";
 import CardPage from "./CartPage";
+import CheckoutPage from "./CheckoutPage";
 
 function App() {
   return (
@@ -18,6 +19,8 @@ function App() {
           <Route path="/product" element={<ProductPage />} />
           <Route path="/productlist" element={<ProductCardList />} />
           <Route path="/cart" element={<CardPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+
 
 
         </Routes>

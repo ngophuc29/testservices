@@ -307,3 +307,41 @@ exports.releaseStock = async (req, res) => {
         res.status(500).json({ message: "Lỗi khi giải phóng sản phẩm", error: error.message });
     }
 };
+
+
+ 
+
+// Confirm đơn hàng: trừ số lượng hàng thực tế và giảm reserved theo số lượng xác nhận
+exports.confirmOrder = async (req, res) => {
+    try {
+        const { items } = req.body;
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ message: "Không có mặt hàng để xác nhận" });
+        }
+
+        // Xử lý đồng thời các mặt hàng
+        await Promise.all(
+            items.map(async (item) => {
+                const { productId, quantity } = item;
+                // Cập nhật inventory: trừ quantity và reserved theo số lượng đặt hàng
+                const updated = await Inventory.findOneAndUpdate(
+                    { productId },
+                    {
+                        $inc: { quantity: -quantity, reserved: -quantity },
+                        $set: { updatedAt: new Date() }
+                    },
+                    { new: true }
+                );
+                if (!updated) {
+                    throw new Error(`Sản phẩm ${productId} không tồn tại`);
+                }
+                if (updated.quantity < 0) {
+                    throw new Error(`Không đủ hàng cho sản phẩm ${productId} sau khi xác nhận`);
+                }
+            })
+        );
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi khi xác nhận đơn hàng trong Inventory", error: error.message });
+    }
+};

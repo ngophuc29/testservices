@@ -29,5 +29,6 @@ router.post("/reserve", inventoryController.reserveStock);
 // Route giải phóng sản phẩm
 router.post("/release", inventoryController.releaseStock);
 
-
+// Thêm route cho confirm đơn hàng
+router.post("/confirm", inventoryController.confirmOrder);
 module.exports = router;
