@@ -15,7 +15,13 @@ export default function InventoryUI() {
 
     useEffect(() => {
         fetchInventory();
-        
+
+        // Tự động đồng bộ mỗi 5 phút (300000 ms)
+        const interval = setInterval(() => {
+            syncInventory();
+        }, 5 * 60 * 1000);
+
+        return () => clearInterval(interval);
     }, []);
 
     // 🟢 Lấy danh sách tồn kho từ Inventory Service
@@ -24,8 +30,7 @@ export default function InventoryUI() {
             setLoading(true);
             const res = await axios.get(INVENTORY_API_URL);
             setInventory(res.data);
-            console.log("data lay dc tu inventory : ",res.data);
-            
+            console.log("Data lấy được từ inventory:", res.data);
         } catch (err) {
             setError("Không thể tải danh sách tồn kho");
         } finally {
@@ -33,7 +38,7 @@ export default function InventoryUI() {
         }
     };
 
-    // 🟠 Kiểm tra tồn kho
+    // 🟠 Kiểm tra tồn kho (dùng dữ liệu đã có trong state)
     const checkStock = () => {
         if (!productId) {
             setError("Vui lòng chọn sản phẩm");
@@ -49,11 +54,12 @@ export default function InventoryUI() {
             setError("Vui lòng chọn sản phẩm và nhập số lượng hợp lệ");
             return;
         }
-
         try {
             setLoading(true);
             await axios.post(IMPORT_API_URL, { productId, quantity });
-            fetchInventory(); // Cập nhật danh sách tồn kho
+            // Sau khi nhập hàng, cập nhật lại danh sách tồn kho
+            fetchInventory();
+            setQuantity(0)
         } catch (err) {
             setError("Lỗi khi nhập hàng");
         } finally {
@@ -61,7 +67,7 @@ export default function InventoryUI() {
         }
     };
 
-    // 🔄 Đồng bộ dữ liệu Inventory từ Product Service
+    // 🔄 Đồng bộ dữ liệu Inventory với Product Service
     const syncInventory = async () => {
         try {
             setLoading(true);
@@ -81,7 +87,7 @@ export default function InventoryUI() {
             {error && <p className="text-red-500">{error}</p>}
             {loading && <p className="text-blue-500">Đang tải...</p>}
 
-            {/* 🔄 Nút đồng bộ */}
+            {/* Bạn có thể giữ nút đồng bộ cho người dùng nếu muốn, nhưng việc tự động đồng bộ đã đảm bảo cập nhật thường xuyên */}
             <button onClick={syncInventory} className="bg-yellow-500 text-white p-2 w-full mb-4">
                 Đồng bộ Inventory 🔄
             </button>
@@ -95,7 +101,7 @@ export default function InventoryUI() {
                 <option value="">Chọn sản phẩm</option>
                 {inventory.map((item) => (
                     <option key={item.productId} value={item.productId}>
-                        {item.productId} - {item.name}- (Tồn kho: {item.stock})
+                        {item.productId} - {item.name} (Tồn kho: {item.stock})
                     </option>
                 ))}
             </select>
@@ -109,18 +115,24 @@ export default function InventoryUI() {
             />
 
             <div className="flex flex-wrap gap-2">
-                <button onClick={checkStock} className="bg-blue-500 text-white p-2 w-1/2">Kiểm tra tồn kho</button>
-                <button onClick={handleImportStock} className="bg-green-500 text-white p-2 w-1/2">Nhập hàng</button>
+                <button onClick={checkStock} className="bg-blue-500 text-white p-2 w-1/2">
+                    Kiểm tra tồn kho
+                </button>
+                <button onClick={handleImportStock} className="bg-green-500 text-white p-2 w-1/2">
+                    Nhập hàng
+                </button>
             </div>
 
             {stockInfo && (
                 <div className="mt-4 p-2 border">
-                    <p><strong>Tồn kho:</strong> {stockInfo.quantity} sản phẩm</p>
+                    <p>
+                        <strong>Tồn kho:</strong> {stockInfo.quantity} sản phẩm
+                    </p>
                     {!stockInfo.inStock && <p className="text-red-500">⚠ Hết hàng</p>}
                 </div>
             )}
 
-            {/* 🔥 Danh sách tồn kho */}
+            {/* Danh sách tồn kho */}
             <h2 className="text-xl font-bold mt-4">Danh sách tồn kho</h2>
             <ul className="border p-2">
                 {inventory.map((item) => (

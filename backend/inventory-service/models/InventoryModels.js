@@ -4,7 +4,8 @@ const inventorySchema = new mongoose.Schema({
     productId: { type: String, required: true, unique: true },
     name: { type: String, required: true    },
     quantity: { type: Number, required: true, default: 0 },
-    updatedAt: { type: Date, default: Date.now }
+    updatedAt: { type: Date, default: Date.now },
+    reserved: { type: Number, required: true, default: 0 }, // Số lượng đã reserve
 });
 
 module.exports = mongoose.model("Inventory", inventorySchema);

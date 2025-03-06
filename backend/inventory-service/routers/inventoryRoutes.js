@@ -21,4 +21,13 @@ router.post("/import", inventoryController.importStock);
 
 // ✅ **API đồng bộ Inventory với Product Service**
 router.post("/syncInventory", inventoryController.syncInventory);
+
+
+// Route đặt chỗ sản phẩm
+router.post("/reserve", inventoryController.reserveStock);
+
+// Route giải phóng sản phẩm
+router.post("/release", inventoryController.releaseStock);
+
+
 module.exports = router;
