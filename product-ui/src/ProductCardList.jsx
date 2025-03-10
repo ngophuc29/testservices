@@ -50,6 +50,9 @@ export default function ProductCardList() {
                 <Link to="/cart" className="bg-green-500 text-white py-2 px-4 rounded">
                     Xem Giỏ Hàng
                 </Link>
+                <Link to="/order" className="bg-green-500 text-white py-2 px-4 rounded">
+                    Xem Đơn Hàng
+                </Link>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {products.map((product) => (

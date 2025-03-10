@@ -58,7 +58,7 @@ export default function CheckoutPage() {
             },
             items: selectedItems.map((item) => ({
                 productId: item.productId,
-                name: item.name,
+                name: item.productName,
                 quantity: item.quantity,
                 price: item.price,
                 total: item.price * item.quantity
@@ -85,7 +85,7 @@ export default function CheckoutPage() {
         try {
             const response = await axios.post(ORDER_API_URL, orderPayload);
             alert("Đơn hàng đã được đặt thành công!");
-            navigate("/order-success", { state: { order: response.data.order } });
+            navigate("/productList", { state: { order: response.data.order } });
         } catch (error) {
             const errMsg = error.response?.data?.message || error.message;
             alert("Lỗi khi đặt hàng: " + errMsg);
@@ -107,7 +107,7 @@ export default function CheckoutPage() {
                             <li key={item.productId} className="flex items-center space-x-4 border-b pb-2">
                                 <img
                                     src={item.image || "https://via.placeholder.com/50"}
-                                    alt={item.name}
+                                    alt={item.productName}
                                     className="w-16 h-16 object-cover rounded"
                                     style={{ width: "40px", height: "40px" }}
                                 />
