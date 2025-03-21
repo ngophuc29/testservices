@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Table, Container, Spinner, Badge } from "react-bootstrap";
+import { Table, Container, Spinner, Badge, Button } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom";
 
 export default function OrderList() {
     const navigate = useNavigate();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
-    const userId = "user123"; // Thay bằng userId thực tế từ localStorage hoặc context
+    const [cancelLoading, setCancelLoading] = useState(false);
+    const userId = "64e65e8d3d5e2b0c8a3e9f12"; // Thay bằng userId thực tế từ localStorage hoặc context
 
+    // Lấy danh sách đơn hàng của user
     useEffect(() => {
         const fetchOrders = async () => {
             try {
@@ -21,7 +23,27 @@ export default function OrderList() {
             }
         };
         fetchOrders();
-    }, []);
+    }, [userId]);
+
+    // Hàm hủy đơn hàng (chỉ khi đơn hàng chưa được xác nhận)
+    const handleCancelOrder = async (orderId) => {
+        if (window.confirm("Bạn có chắc muốn hủy đơn hàng này không?")) {
+            try {
+                setCancelLoading(true);
+                await axios.post(`http://localhost:4005/api/orders/cancel/${orderId}`);
+                alert("Đơn hàng đã được hủy thành công");
+                // Cập nhật lại danh sách đơn hàng sau khi hủy
+                const response = await axios.get(`http://localhost:4005/api/orders/user/${userId}`);
+                setOrders(response.data);
+            } catch (error) {
+                const errMsg = error.response?.data?.message || error.message;
+                alert("Lỗi khi hủy đơn hàng: " + errMsg);
+                console.error(error);
+            } finally {
+                setCancelLoading(false);
+            }
+        }
+    };
 
     return (
         <Container style={{ marginTop: "20px", maxWidth: "900px" }}>
@@ -54,6 +76,7 @@ export default function OrderList() {
                             <th>Tổng tiền</th>
                             <th>Trạng thái</th>
                             <th>Ngày đặt</th>
+                            <th>Hành động</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -85,6 +108,21 @@ export default function OrderList() {
                                 </td>
                                 <td style={{ fontSize: "14px", color: "#555" }}>
                                     {new Date(order.createdAt).toLocaleString()}
+                                </td>
+                                <td>
+                                    {/* Hiển thị nút "Hủy" chỉ khi đơn hàng có trạng thái "pending" */}
+                                    {order.status === "pending" ? (
+                                        <Button
+                                            variant="danger"
+                                            size="sm"
+                                            onClick={() => handleCancelOrder(order._id)}
+                                            disabled={cancelLoading}
+                                        >
+                                            {cancelLoading ? "Đang hủy..." : "Hủy"}
+                                        </Button>
+                                    ) : (
+                                        "-"
+                                    )}
                                 </td>
                             </tr>
                         ))}

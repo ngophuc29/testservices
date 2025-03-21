@@ -7,7 +7,7 @@ const PRODUCT_API_URL = "http://localhost:4004/api/products";
 const CART_API_URL = "http://localhost:4003/api/cart/add";
 
 // UserId giả dùng cho demo
-const fakeUserId = "user123";
+const fakeUserId = "64e65e8d3d5e2b0c8a3e9f12";
 
 export default function ProductCardList() {
     const [products, setProducts] = useState([]);

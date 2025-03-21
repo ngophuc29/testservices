@@ -2,8 +2,9 @@ import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const ORDER_API_URL = "http://localhost:4005/api/orders/create";
-
+// Sử dụng endpoint backend cho Order Service
+const ORDER_API_URL = "http://localhost:4005/api/orders";
+// 64e65e8d3d5e2b0c8a3e9f12
 export default function CheckoutPage() {
     const location = useLocation();
     const navigate = useNavigate();
@@ -15,8 +16,9 @@ export default function CheckoutPage() {
         phone: "",
         email: "",
     });
+    // Payment method: "cod", "credit", "bank"
     const [shippingMethod, setShippingMethod] = useState("standard");
-    const [paymentMethod, setPaymentMethod] = useState("cash");
+    const [paymentMethod, setPaymentMethod] = useState("cod");
     const [customerNote, setCustomerNote] = useState("");
 
     const shippingFees = {
@@ -28,7 +30,6 @@ export default function CheckoutPage() {
         (sum, item) => sum + item.price * item.quantity,
         0
     );
-
     const shippingFee = shippingFees[shippingMethod] || 0;
     const finalTotal = totalProductPrice + shippingFee;
 
@@ -49,45 +50,47 @@ export default function CheckoutPage() {
         }
 
         const orderPayload = {
-            userId: "user123",
+            userId: "64e65e8d3d5e2b0c8a3e9f12", // Thay đổi theo thông tin thực tế (ví dụ: lấy từ auth)
             customer: {
                 name: customerInfo.name,
                 address: customerInfo.address,
                 phone: customerInfo.phone,
-                email: customerInfo.email
+                email: customerInfo.email,
             },
             items: selectedItems.map((item) => ({
                 productId: item.productId,
                 name: item.productName,
                 quantity: item.quantity,
                 price: item.price,
-                total: item.price * item.quantity
+                // Nếu backend tính tổng dựa trên price và quantity, có thể không cần gửi total
+                total: item.price * item.quantity,
             })),
-            totalProductPrice: totalProductPrice,
             shipping: {
                 method: shippingMethod,
                 fee: shippingFee,
                 status: "processing",
-                trackingNumber: ""
+                trackingNumber: "",
             },
             payment: {
-                method: paymentMethod,
-                status: "pending"
+                method: paymentMethod, // "cod", "credit", "bank"
+                status: "pending",
             },
             finalTotal: finalTotal,
             notes: {
                 customerNote: customerNote,
-                sellerNote: ""
+                sellerNote: "",
             },
-            status: "pending"
+            status: "pending",
         };
 
         try {
-            const response = await axios.post(ORDER_API_URL, orderPayload);
+            // Gọi API tạo đơn hàng: POST đến /api/orders/create
+            const response = await axios.post(`${ORDER_API_URL}/create`, orderPayload);
             alert("Đơn hàng đã được đặt thành công!");
             navigate("/productList", { state: { order: response.data.order } });
         } catch (error) {
-            const errMsg = error.response?.data?.message || error.message;
+            const errMsg =
+                error.response?.data?.message || error.message || "Có lỗi xảy ra";
             alert("Lỗi khi đặt hàng: " + errMsg);
             console.error("Lỗi khi đặt hàng:", error.message);
         }
@@ -104,7 +107,10 @@ export default function CheckoutPage() {
                 ) : (
                     <ul className="border p-4 rounded space-y-2">
                         {selectedItems.map((item) => (
-                            <li key={item.productId} className="flex items-center space-x-4 border-b pb-2">
+                            <li
+                                key={item.productId}
+                                className="flex items-center space-x-4 border-b pb-2"
+                            >
                                 <img
                                     src={item.image || "https://via.placeholder.com/50"}
                                     alt={item.productName}
@@ -112,7 +118,7 @@ export default function CheckoutPage() {
                                     style={{ width: "40px", height: "40px" }}
                                 />
                                 <div className="flex-1">
-                                    <p className="font-semibold">{item.name}</p>
+                                    <p className="font-semibold">{item.productName}</p>
                                     <p>
                                         {item.quantity} x{" "}
                                         {item.price.toLocaleString("vi-VN", {
@@ -176,9 +182,9 @@ export default function CheckoutPage() {
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     className="border p-2 w-full mb-2"
                 >
-                    <option value="cash">Thanh toán khi nhận hàng</option>
-                    <option value="credit">Thẻ tín dụng</option>
-                    <option value="bank">Chuyển khoản</option>
+                    <option value="cod">Thanh toán khi nhận hàng</option>
+                    <option value="credit">Thanh toán bằng thẻ tín dụng</option>
+                    <option value="bank">Thanh toán chuyển khoản</option>
                 </select>
             </div>
 
@@ -235,7 +241,10 @@ export default function CheckoutPage() {
                 </p>
             </div>
 
-            <button onClick={handleOrderSubmit} className="bg-green-500 text-white py-2 px-4 rounded w-full">
+            <button
+                onClick={handleOrderSubmit}
+                className="bg-green-500 text-white py-2 px-4 rounded w-full"
+            >
                 Xác nhận đặt hàng
             </button>
         </div>

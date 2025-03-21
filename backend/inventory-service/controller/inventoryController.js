@@ -38,40 +38,63 @@ exports.getAllProducts = async (req, res) => {
 // 2️⃣ API lấy danh sách tồn kho từ Product Service
 //     Fallback: nếu lỗi, lấy dữ liệu từ Inventory Model
 // ------------------------------
+// exports.getInventory = async (req, res) => {
+//     try {
+//         const products = await fetchProductsData();
+//         const inventoryWithWarning = products.map((product) => ({
+//             productId: product._id,
+//             name: product.name,
+//             stock: product.stock,
+//             lowStock: product.stock <= LOW_STOCK_THRESHOLD,
+//         }));
+//         res.json(inventoryWithWarning);
+//     } catch (error) {
+//         console.error("Lỗi khi lấy tồn kho từ Product Service:", error.message);
+//         // Fallback: lấy từ Inventory Model
+//         try {
+//             const inventoryData = await Inventory.find({});
+//             if (!inventoryData || inventoryData.length === 0) {
+//                 return res.status(500).json({
+//                     message: "Không có dữ liệu tồn kho từ Inventory Model",
+//                     error: error.message,
+//                 });
+//             }
+//             const fallbackData = inventoryData.map((item) => ({
+//                 productId: item.productId,
+//                 name: item.name,
+//                 stock: item.quantity,
+//                 lowStock: item.quantity <= LOW_STOCK_THRESHOLD,
+//             }));
+//             res.json(fallbackData);
+//         } catch (fallbackError) {
+//             res.status(500).json({
+//                 message: "Lỗi khi lấy tồn kho từ Inventory Model",
+//                 error: fallbackError.message,
+//             });
+//         }
+//     }
+// };
 exports.getInventory = async (req, res) => {
     try {
-        const products = await fetchProductsData();
-        const inventoryWithWarning = products.map((product) => ({
-            productId: product._id,
-            name: product.name,
-            stock: product.stock,
-            lowStock: product.stock <= LOW_STOCK_THRESHOLD,
-        }));
-        res.json(inventoryWithWarning);
-    } catch (error) {
-        console.error("Lỗi khi lấy tồn kho từ Product Service:", error.message);
-        // Fallback: lấy từ Inventory Model
-        try {
-            const inventoryData = await Inventory.find({});
-            if (!inventoryData || inventoryData.length === 0) {
-                return res.status(500).json({
-                    message: "Không có dữ liệu tồn kho từ Inventory Model",
-                    error: error.message,
-                });
-            }
-            const fallbackData = inventoryData.map((item) => ({
-                productId: item.productId,
-                name: item.name,
-                stock: item.quantity,
-                lowStock: item.quantity <= LOW_STOCK_THRESHOLD,
-            }));
-            res.json(fallbackData);
-        } catch (fallbackError) {
-            res.status(500).json({
-                message: "Lỗi khi lấy tồn kho từ Inventory Model",
-                error: fallbackError.message,
-            });
+        // Ưu tiên lấy dữ liệu từ Inventory Model
+        const inventoryData = await Inventory.find({});
+        if (!inventoryData || inventoryData.length === 0) {
+            return res.status(404).json({ message: "Không có dữ liệu tồn kho trong Inventory" });
         }
+        const result = inventoryData.map(item => ({
+            productId: item.productId,
+            name: item.name,
+            stock: item.quantity,
+            lowStock: item.quantity <= LOW_STOCK_THRESHOLD,
+            reserved: item.reserved,
+            
+        }));
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({
+            message: "Lỗi khi lấy tồn kho từ Inventory Model",
+            error: error.message,
+        });
     }
 };
 
@@ -319,29 +342,69 @@ exports.confirmOrder = async (req, res) => {
             return res.status(400).json({ message: "Không có mặt hàng để xác nhận" });
         }
 
-        // Xử lý đồng thời các mặt hàng
         await Promise.all(
             items.map(async (item) => {
-                const { productId, quantity } = item;
-                // Cập nhật inventory: trừ quantity và reserved theo số lượng đặt hàng
+                // Cập nhật Inventory: trừ quantity và reserved
                 const updated = await Inventory.findOneAndUpdate(
-                    { productId },
+                    { productId: item.productId },
                     {
-                        $inc: { quantity: -quantity, reserved: -quantity },
+                        $inc: { quantity: -item.quantity, reserved: -item.quantity },
                         $set: { updatedAt: new Date() }
                     },
                     { new: true }
                 );
                 if (!updated) {
-                    throw new Error(`Sản phẩm ${productId} không tồn tại`);
+                    throw new Error(`Sản phẩm ${item.productId} không tồn tại`);
                 }
                 if (updated.quantity < 0) {
-                    throw new Error(`Không đủ hàng cho sản phẩm ${productId} sau khi xác nhận`);
+                    throw new Error(`Không đủ hàng cho sản phẩm ${item.productId} sau khi xác nhận`);
                 }
+                // Cập nhật lại stock trong Product Service dựa trên updated.quantity
+                await axios.put(`${PRODUCT_SERVICE_URLImport}/${item.productId}`, { stock: updated.quantity });
             })
         );
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ message: "Lỗi khi xác nhận đơn hàng trong Inventory", error: error.message });
+    }
+};
+
+
+
+
+
+exports.restoreStock = async (req, res) => {
+    try {
+        const { productId, quantity } = req.body;
+        if (!productId || !quantity || quantity <= 0) {
+            return res.status(400).json({ message: "Dữ liệu không hợp lệ" });
+        }
+        const inventory = await Inventory.findOne({ productId });
+        if (!inventory) {
+            return res.status(404).json({ message: "Sản phẩm không tồn tại" });
+        }
+        // Restore: cộng thêm số lượng vào tồn kho
+        inventory.quantity += quantity;
+        inventory.updatedAt = new Date();
+        await inventory.save();
+        res.json({ success: true, quantity: inventory.quantity });
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi khi restore sản phẩm", error: error.message });
+    }
+};
+
+exports.getProduct = async (req, res) => {
+    try {
+        const { productId } = req.params;
+        const item = await Inventory.findOne({ productId });
+        if (!item) return res.status(404).json({ message: "Sản phẩm không tồn tại" });
+        res.json({
+            productId: item.productId,
+            quantity: item.quantity,
+            reserved: item.reserved,
+            name: item.name,
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Lỗi khi lấy thông tin tồn kho", error: error.message });
     }
 };

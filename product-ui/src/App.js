@@ -6,6 +6,7 @@ import ProductCardList from "./ProductCardList";
 import CardPage from "./CartPage";
 import CheckoutPage from "./CheckoutPage";
 import OrderList from "./OrderList";
+import AdminOrderManagement from "./AdminOrderManagement";
 
 function App() {
   return (
@@ -20,10 +21,10 @@ function App() {
           <Route path="/product" element={<ProductPage />} />
           <Route path="/productlist" element={<ProductCardList />} />
           <Route path="/cart" element={<CardPage />} />
-          <Route path="/checkout" element={<CheckoutPage />} />1
+          <Route path="/checkout" element={<CheckoutPage />} /> 
           <Route path="/order" element={<OrderList />} />
 
-
+          <Route path="/adminOrder" element={<AdminOrderManagement />} />
 
 
         </Routes>

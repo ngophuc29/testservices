@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 const CART_API_URL = "http://localhost:4003/api/cart";
 const PRODUCT_API_URLGetInfo = "http://localhost:4004/api/product";
-const fakeUserId = "user123";
+const fakeUserId = "64e65e8d3d5e2b0c8a3e9f12";
 
 export default function CartPage() {
     const navigate=useNavigate()
